@@ -1,26 +1,95 @@
 import os
 import random
 
-class Game:
-    COLORS = [
-        "red", "green", "white", "yellow",
-        "magenta", "blue", "cyan", "brown"
-    ]
+class Board:
+    def __init__(self, size):
+        self.__data = [[None] * size for i in xrange(size)]
 
-    def __init__(self, size, lineSize, appendCount=3, seed=None):
+    def valid(self, x, y):
+        size = self.size()
+        return (x >= 0) and (x < size) and (y >= 0) and (y < size)
+
+    def size(self):
+        return len(self.__data)
+
+    def checkCoords(self, x, y):
+        if not self.valid(x, y):
+            raise Exception("Wrong coordinates.")
+
+    def get(self, x, y):
+        self.checkCoords(x, y)
+        return self.__data[x][y]
+
+    def set(self, x, y, value):
+        self.checkCoords(x, y)
+        self.__data[x][y] = value
+
+    def swap(self, x1, y1, x2, y2):
+        self.checkCoords(x1, y1)
+        self.checkCoords(x2, y2)
+        v = self.__data[x1][y1]
+        self.__data[x1][y1] = self.__data[x2][y2]
+        self.__data[x2][y2] = v
+
+    def feasable(self, x1, y1, x2, y2):
+        opened = {(x1, y1): 0}
+        closed = set()
+        maxCost = self.size() ** 2
+        while opened and ((x2, y2) not in closed):
+            items = opened.items()
+            items.sort(key=lambda i: i[1])
+            coords, cost = items[0]
+            closed.add(coords)
+            x, y = coords
+            opened.pop(coords)
+            for dx in xrange(-1, 2):
+                for dy in xrange(-1, 2):
+                    if dx or dy:
+                        _x = x + dx
+                        _y = y + dy
+                        if (
+                            self.valid(_x, _y)
+                            and (self.__data[_x][_y] is None)
+                            and ((_x, _y) not in closed)
+                            and (opened.get((_x, _y), maxCost) > cost)
+                        ):
+                            opened[(_x, _y)] = cost + 1
+        return (x2, y2) in closed
+
+
+class Game:
+    COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "brown"]
+
+    def __init__(self, size=9, lineSize=5, appendCount=3, seed=None):
         if size < lineSize:
             msg = "Wrong combination of size and line size " \
                   "(size: %d, line size: %d)" % (size, lineSize)
             raise Exception(msg)
-        self.__size = size
+        self.__board = Board(size)
         self.__lineSize = lineSize
         self.__appendCount = appendCount
-        self.__layout = [[None] * size for i in xrange(size)]
         self.__isGameOver = False
         self.__score = 0
         random.seed(seed)
         self.__createNext()
         self.__update()
+
+    def __removeStones(self):
+        # TODO
+        return 0
+
+    def __insertStones(self):
+        coords = []
+        size = self.__board.size()
+        for x in xrange(size):
+            for y in xrange(size):
+                if self.__board.get(x, y) is None:
+                    coords.append((x, y))
+        self.__isGameOver = len(coords) <= self.__appendCount
+        random.shuffle(coords)
+        for color, coords in zip(self.__next, coords):
+            x, y = coords
+            self.__board.set(x, y, color)
 
     def __createNext(self):
         self.__next = [
@@ -28,17 +97,17 @@ class Game:
                 for i in xrange(self.__appendCount)
         ]
 
+    def __stonesCost(self, stonesCount):
+        # FIXME
+        return stonesCount
+
+    def __updateScore(self, removedStonesCount):
+        self.__score += self.__stonesCost(removedStonesCount)
+
     def __update(self):
-        coords = []
-        for x in xrange(self.__size):
-            for y in xrange(self.__size):
-                if self.__layout[x][y] is None:
-                    coords.append((x, y))
-        self.__isGameOver = len(coords) <= self.__appendCount
-        random.shuffle(coords)
-        for color, coords in zip(self.__next, coords):
-            x, y = coords
-            self.__layout[x][y] = color
+        removedStonesCount = self.__removeStones()
+        self.__updateScore(removedStonesCount)
+        self.__insertStones()
         self.__createNext()
 
     def next(self):
@@ -50,25 +119,14 @@ class Game:
     def move(self, x1, y1, x2, y2):
         if self.__isGameOver:
             raise Exception("Game is over")
-        if (
-            (x1 < 0)
-            or (x1 >= self.__size)
-            or (y1 < 0)
-            or (y1 >= self.__size)
-            or (x2 < 0)
-            or (x2 >= self.__size)
-            or (y2 < 0)
-            or (y2 >= self.__size)
-            or ((x1 == x2) and (y1 == y2))
-        ):
+        if (x1 == x2) and (y1 == y2):
             raise Exception("Wrong coordinates.")
-        if self.__layout[x1][y1] is None:
+        if self.__board.get(x1, y1) is None:
             raise Exception("Start position is empty")
-        if self.__layout[x2][y2] is not None:
+        if self.__board.get(x2, y2) is not None:
             raise Exception("End position is not empty")
-        if self.feasable(x1, y1, x2, y2):
-            self.__layout[x2][y2] = self.__layout[x1][y1]
-            self.__layout[x1][y1] = None
+        if self.__board.feasable(x1, y1, x2, y2):
+            self.__board.swap(x1, y1, x2, y2)
         self.__update()
 
     def score(self):
@@ -76,10 +134,11 @@ class Game:
 
     def __repr__(self):
         l = []
-        for y in xrange(self.__size):
+        size = self.__board.size()
+        for y in xrange(size):
             s = ""
-            for x in xrange(self.__size):
-                v = self.__layout[x][y]
+            for x in xrange(size):
+                v = self.__board.get(x, y)
                 if v is None:
                     s += "."
                 else:
@@ -91,27 +150,4 @@ class Game:
         l.append("")
         return os.linesep.join(l)
 
-    def feasable(self, x1, y1, x2, y2):
-        current = [(x1, y1)]
-        l = [[False] * self.__size for x in xrange(self.__size)]
-        l[x1][y1] = True
-        while True:
-            i = 0
-            for x in xrange(self.__size):
-                for y in xrange(self.__size):
-                    if (
-                        (self.__layout[x][y] is None)
-                        and (not l[x][y])
-                        and (
-                            (x and l[x - 1][y])
-                            or (y and l[x][y - 1])
-                            or ((x < self.__size - 1) and l[x + 1][y])
-                            or ((y < self.__size - 1) and l[x][y + 1])
-                        )
-                    ):
-                        l[x][y] = True
-                        i += 1
-            if not i:
-                break
-        return l[x2][y2]
 
