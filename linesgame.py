@@ -1,6 +1,7 @@
 import os
 import random
 
+
 class Board:
     def __init__(self, size):
         self.__data = [[None] * size for i in xrange(size)]
@@ -74,9 +75,31 @@ class Game:
         self.__createNext()
         self.__update()
 
+    def __getStonesInLine(self, x, y, dx, dy, color):
+        stones = []
+        if self.__board.get(x, y) == color:
+            stones.append((x, y))
+            x1 = x + dx
+            y1 = y + dy
+            if self.__board.valid(x1, y1):
+                stones += self.__getStonesInLine(x1, y1, dx, dy, color)
+        return stones
+
     def __removeStones(self):
-        # TODO
-        return 0
+        size = self.__board.size()
+        deltas = (-1, 1), (0, 1), (1, 1), (1, 0)
+        removedStones = set()
+        for x in xrange(size):
+            for y in xrange(size):
+                color = self.__board.get(x, y)
+                if color is not None:
+                    for dx, dy in deltas:
+                        stones = self.__getStonesInLine(x, y, dx, dy, color)
+                        if len(stones) >= self.__lineSize:
+                            removedStones.update(stones)
+        for x, y in removedStones:
+            self.__board.set(x, y, None)
+        return removedStones
 
     def __insertStones(self):
         coords = []
@@ -97,16 +120,16 @@ class Game:
                 for i in xrange(self.__appendCount)
         ]
 
-    def __stonesCost(self, stonesCount):
+    def __stonesCost(self, stones):
         # FIXME
-        return stonesCount
+        return len(stones)
 
-    def __updateScore(self, removedStonesCount):
-        self.__score += self.__stonesCost(removedStonesCount)
+    def __updateScore(self, removedStones):
+        self.__score += self.__stonesCost(removedStones)
 
     def __update(self):
-        removedStonesCount = self.__removeStones()
-        self.__updateScore(removedStonesCount)
+        removedStones = self.__removeStones()
+        self.__updateScore(removedStones)
         self.__insertStones()
         self.__createNext()
 
@@ -144,10 +167,9 @@ class Game:
                 else:
                     s += v[0]
             l.append(s)
-        l.append("Next: %s" % ("".join(map(lambda i: i[0], self.__next))))
+        l.append("Next  : %s" % ("".join(map(lambda i: i[0], self.__next))))
+        l.append("Score : %d" % (self.__score))
         if self.__isGameOver:
             l.append("Game is over")
         l.append("")
         return os.linesep.join(l)
-
-
