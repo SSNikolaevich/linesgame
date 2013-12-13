@@ -71,6 +71,7 @@ class Game:
         self.__appendCount = appendCount
         self.__isGameOver = False
         self.__score = 0
+        self.__bonusScore = 0
         random.seed(seed)
         self.__createNext()
         self.__update()
@@ -121,8 +122,9 @@ class Game:
         ]
 
     def __stonesCost(self, stones):
-        # FIXME
-        return len(stones)
+        stonesCount = len(stones)
+        return 2 * (stonesCount ** 2) - 20 * stonesCount + 60 \
+            + self.__bonusScore
 
     def __updateScore(self, removedStones):
         self.__score += self.__stonesCost(removedStones)
