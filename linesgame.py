@@ -139,7 +139,7 @@ class Game:
     def isGameOver(self):
         return self.__isGameOver
 
-    def move(self, x1, y1, x2, y2):
+    def makeMove(self, x1, y1, x2, y2):
         if self.__isGameOver:
             raise Exception("Game is over")
         if (x1 == x2) and (y1 == y2):
