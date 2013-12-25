@@ -45,4 +45,3 @@ class RandomBot(Player):
         sx, sy = random.choice(getSources(board))
         tx, ty = random.choice(getTargets(board, sx, sy))
         return sx, sy, tx, ty
-
