@@ -32,7 +32,7 @@ class Board:
         self.__data[x1][y1] = self.__data[x2][y2]
         self.__data[x2][y2] = v
 
-    def feasable(self, x1, y1, x2, y2):
+    def feasible(self, x1, y1, x2, y2):
         opened = {(x1, y1): 0}
         closed = set()
         maxCost = self.size() ** 2
@@ -58,6 +58,46 @@ class Board:
         return (x2, y2) in closed
 
 
+class ReadonlyBoardView:
+    def __init__(self, board):
+        self.__board = board
+
+    def valid(self, x, y):
+        return self.__board.valid(x, y)
+
+    def size(self):
+        return self.__board.size()
+
+    def checkCoords(self, x, y):
+        return self.__board.checkCoords(x, y)
+
+    def get(self, x, y):
+        return self.__board.get(x, y)
+
+    def feasible(self, x1, y1, x2, y2):
+        return self.__board.feasible(x1, y1, x2, y2)
+
+
+class ReadOnlyGameView:
+    def __init__(self, game):
+        self.__game = game
+
+    def lineSize(self):
+        return self.__game.lineSize()
+
+    def board(self):
+        return self.__game.board()
+
+    def next(self):
+        return self.__game.next()
+
+    def isOver(self):
+        return self.__game.isOver()
+
+    def __str__(self):
+        return str(self.__game)
+
+
 class Game:
     COLORS = ["red", "green", "blue", "yellow", "magenta", "cyan", "brown"]
 
@@ -69,7 +109,7 @@ class Game:
         self.__board = Board(size)
         self.__lineSize = lineSize
         self.__appendCount = appendCount
-        self.__isGameOver = False
+        self.__isOver = False
         self.__score = 0
         self.__bonusScore = 0
         random.seed(seed)
@@ -109,17 +149,17 @@ class Game:
             for y in xrange(size):
                 if self.__board.get(x, y) is None:
                     coords.append((x, y))
-        self.__isGameOver = len(coords) <= self.__appendCount
+        self.__isOver = len(coords) <= self.__appendCount
         random.shuffle(coords)
         for color, coords in zip(self.__next, coords):
             x, y = coords
             self.__board.set(x, y, color)
 
     def __createNext(self):
-        self.__next = [
+        self.__next = tuple(
             random.choice(Game.COLORS)
                 for i in xrange(self.__appendCount)
-        ]
+        )
 
     def __stonesCost(self, stones):
         stonesCount = len(stones)
@@ -135,14 +175,23 @@ class Game:
         self.__insertStones()
         self.__createNext()
 
+    def lineSize(self):
+        return self.__lineSize
+
+    def board(self):
+        return ReadonlyBoardView(self.__board)
+
     def next(self):
         return self.__next
 
-    def isGameOver(self):
-        return self.__isGameOver
+    def isOver(self):
+        return self.__isOver
+
+    def readOnlyView(self):
+        return ReadOnlyGameView(self)
 
     def makeMove(self, x1, y1, x2, y2):
-        if self.__isGameOver:
+        if self.__isOver:
             raise Exception("Game is over")
         if (x1 == x2) and (y1 == y2):
             raise Exception("Wrong coordinates.")
@@ -150,14 +199,14 @@ class Game:
             raise Exception("Start position is empty")
         if self.__board.get(x2, y2) is not None:
             raise Exception("End position is not empty")
-        if self.__board.feasable(x1, y1, x2, y2):
+        if self.__board.feasible(x1, y1, x2, y2):
             self.__board.swap(x1, y1, x2, y2)
         self.__update()
 
     def score(self):
         return self.__score
 
-    def __repr__(self):
+    def __str__(self):
         l = []
         size = self.__board.size()
         for y in xrange(size):
@@ -171,7 +220,7 @@ class Game:
             l.append(s)
         l.append("Next  : %s" % ("".join(map(lambda i: i[0], self.__next))))
         l.append("Score : %d" % (self.__score))
-        if self.__isGameOver:
+        if self.__isOver:
             l.append("Game is over")
         l.append("")
         return os.linesep.join(l)
