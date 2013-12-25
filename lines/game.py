@@ -1,5 +1,6 @@
 import os
 import random
+import logging
 
 
 class Board:
@@ -106,6 +107,16 @@ class Game:
             msg = "Wrong combination of size and line size " \
                   "(size: %d, line size: %d)" % (size, lineSize)
             raise Exception(msg)
+        self.__logger = logging.getLogger("game")
+        self.__logger.debug(
+            "Start new game. Board size: %d, "
+            "line size: %d, append stones: %d, "
+            "seed: %s.",
+            size,
+            lineSize,
+            appendCount,
+            repr(seed)
+        )
         self.__board = Board(size)
         self.__lineSize = lineSize
         self.__appendCount = appendCount
@@ -139,6 +150,7 @@ class Game:
                         if len(stones) >= self.__lineSize:
                             removedStones.update(stones)
         for x, y in removedStones:
+            self.__logger.debug("Remove stone in (%d, %d).", x, y)
             self.__board.set(x, y, None)
         return removedStones
 
@@ -153,6 +165,12 @@ class Game:
         random.shuffle(coords)
         for color, coords in zip(self.__next, coords):
             x, y = coords
+            self.__logger.debug(
+                "Insert %s stone into (%d, %d).",
+                color,
+                x,
+                y
+            )
             self.__board.set(x, y, color)
 
     def __createNext(self):
@@ -160,11 +178,15 @@ class Game:
             random.choice(Game.COLORS)
                 for i in xrange(self.__appendCount)
         )
+        self.__logger.debug("Next stones: %s.", ", ".join(self.__next))
 
     def __stonesCost(self, stones):
         stonesCount = len(stones)
-        return 2 * (stonesCount ** 2) - 20 * stonesCount + 60 \
-            + self.__bonusScore
+        if stonesCount:
+            return 2 * (stonesCount ** 2) - 20 * stonesCount + 60 \
+                + self.__bonusScore
+        else:
+            return 0
 
     def __updateScore(self, removedStones):
         self.__score += self.__stonesCost(removedStones)
@@ -191,6 +213,7 @@ class Game:
         return ReadOnlyGameView(self)
 
     def makeMove(self, x1, y1, x2, y2):
+        self.__logger.debug("Move (%d, %d) -> (%d, %d).", x1, y1, x2, y2)
         if self.__isOver:
             raise Exception("Game is over")
         if (x1 == x2) and (y1 == y2):
@@ -202,6 +225,7 @@ class Game:
         if self.__board.feasible(x1, y1, x2, y2):
             self.__board.swap(x1, y1, x2, y2)
         self.__update()
+        self.__logger.debug("Score: %d", self.__score)
 
     def score(self):
         return self.__score
