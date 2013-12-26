@@ -14,49 +14,50 @@ class Board:
     def size(self):
         return len(self.__data)
 
-    def checkCoords(self, x, y):
+    def __checkCoords(self, x, y):
         if not self.valid(x, y):
             raise Exception("Wrong coordinates.")
 
     def get(self, x, y):
-        self.checkCoords(x, y)
+        self.__checkCoords(x, y)
         return self.__data[x][y]
 
     def set(self, x, y, value):
-        self.checkCoords(x, y)
+        self.__checkCoords(x, y)
         self.__data[x][y] = value
 
     def swap(self, x1, y1, x2, y2):
-        self.checkCoords(x1, y1)
-        self.checkCoords(x2, y2)
+        self.__checkCoords(x1, y1)
+        self.__checkCoords(x2, y2)
         v = self.__data[x1][y1]
         self.__data[x1][y1] = self.__data[x2][y2]
         self.__data[x2][y2] = v
 
-    def feasible(self, x1, y1, x2, y2):
-        opened = {(x1, y1): 0}
-        closed = set()
-        maxCost = self.size() ** 2
-        while opened and ((x2, y2) not in closed):
-            items = opened.items()
-            items.sort(key=lambda i: i[1])
-            coords, cost = items[0]
-            closed.add(coords)
-            x, y = coords
-            opened.pop(coords)
-            for dx in xrange(-1, 2):
-                for dy in xrange(-1, 2):
-                    if dx or dy:
-                        _x = x + dx
-                        _y = y + dy
-                        if (
-                            self.valid(_x, _y)
-                            and (self.__data[_x][_y] is None)
-                            and ((_x, _y) not in closed)
-                            and (opened.get((_x, _y), maxCost) > cost)
-                        ):
-                            opened[(_x, _y)] = cost + 1
-        return (x2, y2) in closed
+
+def feasible(board, x1, y1, x2, y2):
+    opened = {(x1, y1): 0}
+    closed = set()
+    maxCost = board.size() ** 2
+    while opened and ((x2, y2) not in closed):
+        items = opened.items()
+        items.sort(key=lambda i: i[1])
+        coords, cost = items[0]
+        closed.add(coords)
+        x, y = coords
+        opened.pop(coords)
+        for dx in xrange(-1, 2):
+            for dy in xrange(-1, 2):
+                if dx or dy:
+                    _x = x + dx
+                    _y = y + dy
+                    if (
+                        board.valid(_x, _y)
+                        and (board.get(_x, _y) is None)
+                        and ((_x, _y) not in closed)
+                        and (opened.get((_x, _y), maxCost) > cost)
+                    ):
+                        opened[(_x, _y)] = cost + 1
+    return (x2, y2) in closed
 
 
 class ReadonlyBoardView:
@@ -69,14 +70,8 @@ class ReadonlyBoardView:
     def size(self):
         return self.__board.size()
 
-    def checkCoords(self, x, y):
-        return self.__board.checkCoords(x, y)
-
     def get(self, x, y):
         return self.__board.get(x, y)
-
-    def feasible(self, x1, y1, x2, y2):
-        return self.__board.feasible(x1, y1, x2, y2)
 
 
 class ReadOnlyGameView:
@@ -222,7 +217,7 @@ class Game:
             raise Exception("Start position is empty")
         if self.__board.get(x2, y2) is not None:
             raise Exception("End position is not empty")
-        if self.__board.feasible(x1, y1, x2, y2):
+        if feasible(self.__board, x1, y1, x2, y2):
             self.__board.swap(x1, y1, x2, y2)
         self.__update()
         self.__logger.debug("Score: %d", self.__score)

@@ -1,4 +1,5 @@
 import random
+from .game import feasible
 from .player import Player
 
 
@@ -24,7 +25,7 @@ def isSource(board, x, y):
 
 
 def isTarget(board, sx, sy, tx, ty):
-    return (board.get(tx, ty) is None) and board.feasible(sx, sy, tx, ty)
+    return (board.get(tx, ty) is None) and feasible(board, sx, sy, tx, ty)
 
 
 def getSources(board):
